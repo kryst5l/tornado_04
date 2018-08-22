@@ -1,0 +1,72 @@
+#coding:utf-8
+
+
+import tornado.web
+import tornado.ioloop
+import tornado.options
+import tornado.httpserver
+import json
+import time
+import torndb
+import os
+
+
+from tornado.options import options
+from tornado.web import RequestHandler
+
+
+tornado.options.define("port",default=9000,type=int,help="run server on the given port")
+
+
+class BaseHandler(RequestHandler):
+    """请求处理基类"""
+    def prepare(self):
+        if self.request.headers.get("Content-Type","").startswith("application/jison"):
+            try:
+                self.json_args=json.loads(self.request.body)
+            except Exception as e:
+                self.json_args={}
+
+
+class IndexHandler(BaseHandler):
+    """请求处理类"""
+    def get(self):
+        self.render("xsrf.html")
+
+
+    def post(self):
+        self.write("OK")
+
+
+class Application(tornado.web.Application):
+    def __init__(self,*args,**kwargs):
+        super(Application,self).__init__(*args,**kwargs)
+        self.db=torndb.Connection(
+            host="127.0.0.1",
+            database="itcast",
+            user="root",
+            password="mysql"
+        )
+
+
+
+if __name__=="__main__":
+    tornado.options.parse_command_line()
+    settings={
+        "debug":True,
+        "cookie_secret":"asdqwezxc",
+        "template_path":os.path.join(os.path.dirname(__file__),"template"),
+        "xsrf cookies":True
+    }
+
+
+    app=Application(
+        [
+            (r"/",IndexHandler)
+        ],
+        **settings
+    )
+
+    http_server = tornado.httpserver.HTTPServer(app)
+    http_server.listen(options.port)
+    tornado.ioloop.IOLoop.current().start()
